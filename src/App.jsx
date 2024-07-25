@@ -5,6 +5,8 @@ function App() {
   const [audioContext, setAudioContext] = useState(null);
   const [noiseSource, setNoiseSource] = useState(null);
   const canvasRef = useRef(null);
+  const analyserCanvasRef = useRef(null);
+  const analyserNode = useRef(null);
   const [dragging, setDragging] = useState(false);
   const [x, setX] = useState(0.5);
   const [y, setY] = useState(0.5);
@@ -38,14 +40,18 @@ function App() {
     if (!audioContext) {
       const newAudioContext = new (window.AudioContext)();
       setAudioContext(newAudioContext);
+      analyserNode.current = newAudioContext.createAnalyser();
+      analyserNode.current.fftSize = 256;
       const newNoiseSource = createNoise(newAudioContext, x, y);
       setNoiseSource(newNoiseSource);
-      newNoiseSource.connect(newAudioContext.destination);
+      newNoiseSource.connect(analyserNode.current);
+      analyserNode.current.connect(newAudioContext.destination);
       newNoiseSource.start();
     } else {
       const newNoiseSource = createNoise(audioContext, x, y);
       setNoiseSource(newNoiseSource);
-      newNoiseSource.connect(audioContext.destination);
+      newNoiseSource.connect(analyserNode.current);
+      analyserNode.current.connect(audioContext.destination);
       newNoiseSource.start();
     }
   }
@@ -114,7 +120,8 @@ function App() {
       noiseSource.stop();
       const newNoiseSource = createNoise(audioContext, newX, newY);
       setNoiseSource(newNoiseSource);
-      newNoiseSource.connect(audioContext.destination);
+      newNoiseSource.connect(analyserNode.current);
+      analyserNode.current.connect(audioContext.destination);
       newNoiseSource.start();
     }
   }
@@ -145,39 +152,55 @@ function App() {
   }, []);
 
   useEffect(() => {
-    let animationFrameId;
+    if (analyserCanvasRef.current && analyserNode.current) {
+      const analyserCtx = analyserCanvasRef.current.getContext("2d");
+      analyserCanvasRef.current.width = window.innerWidth;
+      analyserCanvasRef.current.height = 200;
 
-    const update = () => {
-      if (dragging) {
-        setAxisX(x);
-        setAxisY(y);
-        animationFrameId = requestAnimationFrame(update);
-      }
-    };
+      const drawSpectrum = () => {
+        if (analyserNode.current) {
+          const bufferLength = analyserNode.current.frequencyBinCount;
+          const dataArray = new Uint8Array(bufferLength);
+          analyserNode.current.getByteFrequencyData(dataArray);
 
-    update();
+          analyserCtx.clearRect(0, 0, analyserCanvasRef.current.width, analyserCanvasRef.current.height);
 
-    return () => {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
-    };
-  }, [dragging, x, y]);
+          const barWidth = analyserCanvasRef.current.width / bufferLength;
+          let barHeight;
+          let x = 0;
+
+          for (let i = 0; i < bufferLength; i++) {
+            barHeight = dataArray[i] / 2;
+            analyserCtx.fillStyle = `rgb(${barHeight + 100}, 150, 150)`;
+            analyserCtx.fillRect(x, analyserCanvasRef.current.height - barHeight, barWidth, barHeight);
+            x += barWidth + 1;
+          }
+        }
+        requestAnimationFrame(drawSpectrum);
+      };
+
+      drawSpectrum();
+    }
+  }, [noiseSource]);
 
   return (
     <div className="container" style={{ backgroundColor: bgColor }}>
       <canvas
         ref={canvasRef}
-        style={{ width: "100%", height: "100%" }}
+        style={{ width: "100%", height: "calc(100% - 200px)" }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       ></canvas>
-      <div style={{ position: "fixed", bottom: 10, left: 10 }}>
+      <canvas
+        ref={analyserCanvasRef}
+        style={{ width: "100%", height: "200px", position: "absolute", bottom: 0 }}
+      ></canvas>
+      <div style={{ position: "fixed", bottom: 210, left: 10 }}>
         <p>Pointer Position: x={x.toFixed(2)}, y={y.toFixed(2)}</p>
       </div>
-      <div style={{ position: "fixed", bottom: 10, right: 10 }}>
+      <div style={{ position: "fixed", bottom: 210, right: 10 }}>
         <button onClick={startNoise} style={{ marginRight: 10 }}>Start Noise</button>
         <button onClick={stopNoise}>Stop Noise</button>
       </div>
