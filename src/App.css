@@ -67,8 +67,8 @@ button {
 
 #main-canvas {
   width: 100%;
-  height: calc(100% - 200px);
-  cursor: pointer;
+  cursor: crosshair;
+  background: transparent;
 }
 
 #analyser-canvas {
@@ -80,11 +80,10 @@ button {
 
 #info {
   position: fixed;
-  bottom: 210px;
+  bottom: 10px;
   left: 10px;
   background-color: rgba(255, 255, 255, 0.8);
   padding: 10px;
-  border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   justify-content: space-between;
@@ -125,6 +124,8 @@ button:hover {
   position: fixed;
   background-color: #333;
   transition: all 0.1s ease;
+  pointer-events: none;
+  /* Prevent cursor interactions */
 }
 
 .horizontal-line {
@@ -137,4 +138,15 @@ button:hover {
   top: 0;
   bottom: 0;
   width: 1px;
+}
+
+#main-canvas::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  mix-blend-mode: overlay;
 }
