@@ -11,6 +11,7 @@ function App() {
   const [bgColor, setBgColor] = useState("#b0e0e6");
   const [axisX, setAxisX] = useState(0.5);
   const [axisY, setAxisY] = useState(0.5);
+  const [noiseType, setNoiseType] = useState("white"); // New state for noise type
 
   const canvasRef = useRef(null);
   const analyserCanvasRef = useRef(null);
@@ -59,19 +60,38 @@ function App() {
     }
   }, [noiseSource]);
 
-  const createNoise = (audioCtx, x, y) => {
+  const createNoise = (audioCtx, type) => {
     const bufferSize = 2 * audioCtx.sampleRate;
     const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
     const output = buffer.getChannelData(0);
 
-    let lastOut = 0.0;
-    for (let i = 0; i < bufferSize; i++) {
-      const white = Math.random() * 2 - 1;
-      let brown = (lastOut + (0.02 * white)) / 1.02;
-      lastOut = brown;
-      brown *= 0.5;
-
-      output[i] = white * (1 - x) + brown * x;
+    if (type === "white") {
+      for (let i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 2 - 1;
+      }
+    } else if (type === "pink") {
+      let b0, b1, b2, b3, b4, b5, b6;
+      b0 = b1 = b2 = b3 = b4 = b5 = b6 = 0.0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + white * 0.0555179;
+        b1 = 0.99332 * b1 + white * 0.0750759;
+        b2 = 0.96900 * b2 + white * 0.1538520;
+        b3 = 0.86650 * b3 + white * 0.3104856;
+        b4 = 0.55000 * b4 + white * 0.5329522;
+        b5 = -0.7616 * b5 - white * 0.0168980;
+        output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+        output[i] *= 0.11; // (roughly) compensate for gain
+        b6 = white * 0.115926;
+      }
+    } else if (type === "brown") {
+      let lastOut = 0.0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        output[i] = (lastOut + (0.02 * white)) / 1.02;
+        lastOut = output[i];
+        output[i] *= 3.5; // (roughly) compensate for gain
+      }
     }
 
     const noise = audioCtx.createBufferSource();
@@ -93,13 +113,13 @@ function App() {
       analyserNode.current = newAudioContext.createAnalyser();
       analyserNode.current.fftSize = 256;
 
-      const newNoiseSource = createNoise(newAudioContext, x, y);
+      const newNoiseSource = createNoise(newAudioContext, noiseType);
       setNoiseSource(newNoiseSource);
       newNoiseSource.connect(analyserNode.current);
       analyserNode.current.connect(newAudioContext.destination);
       newNoiseSource.start();
     } else {
-      const newNoiseSource = createNoise(audioContext, x, y);
+      const newNoiseSource = createNoise(audioContext, noiseType);
       setNoiseSource(newNoiseSource);
       newNoiseSource.connect(analyserNode.current);
       analyserNode.current.connect(audioContext.destination);
@@ -146,7 +166,7 @@ function App() {
 
     if (noiseSource) {
       noiseSource.stop();
-      const newNoiseSource = createNoise(audioContext, newX, newY);
+      const newNoiseSource = createNoise(audioContext, noiseType);
       setNoiseSource(newNoiseSource);
       newNoiseSource.connect(analyserNode.current);
       analyserNode.current.connect(audioContext.destination);
@@ -173,6 +193,11 @@ function App() {
         <div id="controls">
           <button onClick={startNoise}>Start Noise</button>
           <button onClick={stopNoise}>Stop Noise</button>
+          <select onChange={(e) => setNoiseType(e.target.value)} value={noiseType}>
+            <option value="white">White Noise</option>
+            <option value="pink">Pink Noise</option>
+            <option value="brown">Brown Noise</option>
+          </select>
         </div>
       </div>
       <div className="horizontal-line" style={{ top: `${axisY * 100}%` }} />
