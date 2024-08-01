@@ -5,10 +5,12 @@ import "./Pink.css";
 function Pink() {
   const [audioContext, setAudioContext] = useState(null);
   const [noiseSource, setNoiseSource] = useState(null);
+  const [gainNode, setGainNode] = useState(null);
   const [dragging, setDragging] = useState(false);
   const [x, setX] = useState(0.5);
   const [y, setY] = useState(0.5);
   const [bgColor, setBgColor] = useState("#b0e0e6");
+  const [volume, setVolume] = useState(0.5); // Default volume
 
   const canvasRef = useRef(null);
   const analyserNode = useRef(null);
@@ -90,16 +92,26 @@ function Pink() {
       analyserNode.current = newAudioContext.createAnalyser();
       analyserNode.current.fftSize = 256;
 
+      const newGainNode = newAudioContext.createGain();
+      newGainNode.gain.value = volume;
+      setGainNode(newGainNode);
+
       const newNoiseSource = createPinkNoise(newAudioContext, x, y);
       setNoiseSource(newNoiseSource);
       newNoiseSource.connect(analyserNode.current);
-      analyserNode.current.connect(newAudioContext.destination);
+      analyserNode.current.connect(newGainNode);
+      newGainNode.connect(newAudioContext.destination);
       newNoiseSource.start();
     } else {
+      const newGainNode = audioContext.createGain();
+      newGainNode.gain.value = volume;
+      setGainNode(newGainNode);
+
       const newNoiseSource = createPinkNoise(audioContext, x, y);
       setNoiseSource(newNoiseSource);
       newNoiseSource.connect(analyserNode.current);
-      analyserNode.current.connect(audioContext.destination);
+      analyserNode.current.connect(newGainNode);
+      newGainNode.connect(audioContext.destination);
       newNoiseSource.start();
     }
   };
@@ -149,6 +161,14 @@ function Pink() {
     }
   };
 
+  const handleVolumeChange = (e) => {
+    const newVolume = e.target.value;
+    setVolume(newVolume);
+    if (gainNode) {
+      gainNode.gain.value = newVolume;
+    }
+  };
+
   return (
     <div id="container" style={{ backgroundColor: bgColor }}>
       <canvas
@@ -164,6 +184,14 @@ function Pink() {
         <div id="controls">
           <button onClick={startNoise}>Start Noise</button>
           <button onClick={stopNoise}>Stop Noise</button>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={volume}
+            onChange={handleVolumeChange}
+          />
         </div>
       </div>
       <div className="horizontal-line" style={{ top: `${y * 100}%` }} />
