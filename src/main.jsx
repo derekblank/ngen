@@ -5,7 +5,7 @@ import Pink from "./Pink";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    {/* <App /> */}
-    <Pink />
+    <App />
+    {/* <Pink /> */}
   </React.StrictMode>,
 );
