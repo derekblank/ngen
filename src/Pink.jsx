@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { updateBackgroundColor, hexToRgb } from "./util/colors";
-import "./Pink.css";
+import "./css/Pink.css";
 
 function Pink() {
   const [audioContext, setAudioContext] = useState(null);

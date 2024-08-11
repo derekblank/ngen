@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import useNoise from "./hooks/useNoise";
 import { updateBackgroundColor } from "./util/colors";
-import "./App.css";
+import "./css/App.css";
 
 function App() {
   const [x, setX] = useState(0.5);
