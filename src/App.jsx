@@ -23,7 +23,7 @@ function App() {
       canvas.height = window.innerHeight;
     };
     window.addEventListener("resize", handleResize);
-    handleResize(); // Set initial size
+    handleResize();
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
@@ -101,7 +101,7 @@ function App() {
     updateCanvas(e);
   };
 
-  const updateCanvas = (e) => {
+const updateCanvas = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     const newX = (e.clientX - rect.left) / rect.width;
     const newY = (e.clientY - rect.top) / rect.height;
